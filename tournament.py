@@ -21,6 +21,7 @@ def deleteMatches():
     #Delete from Database
     c.execute("DELETE FROM matches")
     db.commit()
+    #Close DB Connection
     db.close()
 
 def deletePlayers():
@@ -31,6 +32,7 @@ def deletePlayers():
     #Delete from Database
     c.execute("DELETE FROM players;")
     db.commit()
+    #Close DB Connection
     db.close()
 
 def deleteTournamentPlayers():
@@ -40,6 +42,7 @@ def deleteTournamentPlayers():
     #Delete from Database
     c.execute("DELETE FROM tournament_players;")
     db.commit()
+    #Close DB Connection
     db.close()
 
 def deleteTournaments():
@@ -49,6 +52,7 @@ def deleteTournaments():
     #Delete from Database
     c.execute("DELETE FROM tournaments;")
     db.commit()
+    #Close DB Connection
     db.close()
 
 def countPlayers():
@@ -58,7 +62,7 @@ def countPlayers():
     #run Database Query
     c.execute("SELECT count(*) from players;")
     rows = c.fetchall()
-
+    #Close DB Connection
     db.close()
 
     return int(rows[0][0])
@@ -74,6 +78,7 @@ def createTournament(name, tournamentID = None):
         c.execute("INSERT INTO tournaments VALUES (%s, %s);", (tournamentID, name))
 
     db.commit()
+    #Close DB Connection
     db.close()
 
 
@@ -91,6 +96,7 @@ def registerPlayer(name, tournamentID = 1):
         c.execute("INSERT INTO tournament_players VALUES (%s, %s, DEFAULT)", (tournamentID, playerID))
 
     db.commit()
+    #Close DB Connection
     db.close()
 
 def addPlayerToTournament(tournamentID, playerID):
@@ -101,6 +107,7 @@ def addPlayerToTournament(tournamentID, playerID):
     c.execute("INSERT INTO tournament_players VALUES (%s, %s, DEFAULT)", (tournamentID, playerID))
 
     db.commit()
+    #Close DB Connection
     db.close()
 
 def playerStandings(tournamentID = 1):
@@ -110,7 +117,7 @@ def playerStandings(tournamentID = 1):
     #run Database Query
     c.execute("SELECT PlayerID, PlayerName, Wins, Games FROM player_stats WHERE TournamentID = %s" , (tournamentID, ))
     rows = c.fetchall()
-
+    #Close DB Connection
     db.close()
 
     l = list()
@@ -127,7 +134,7 @@ def playerStats(tournamentID = 1):
     #run Database Query
     c.execute("SELECT * FROM player_stats WHERE TournamentID = %s;", (tournamentID, ))
     rows = c.fetchall()
-
+    #Close DB Connection
     db.close()
 
     return [(int(row[1]), row[2], int(row[3]), int(row[4]), int(row[5])) for row in rows]
@@ -139,6 +146,7 @@ def reportMatch(firstPlayer, secondPlayer, winner, tournamentID = 1):
     #run Database Query
     c.execute("INSERT INTO matches VALUES (DEFAULT, %s, %s, %s, %s);", (tournamentID, firstPlayer, secondPlayer, winner))
     db.commit()
+    #Close DB Connection
     db.close()
 
 def swissPairings(tournamentID = 1):
@@ -153,7 +161,7 @@ def swissPairings(tournamentID = 1):
         luckyPlayer = players.pop()
         setBye(luckyPlayer[0])
 
-        # directly report the match and remove the lucky player from the standings
+        # report the match / remove the lucky player 
         reportMatch(luckyPlayer[0], None, luckyPlayer[0])
         standings = [player for player in standings if player[0] != luckyPlayer[0]]
 
@@ -176,7 +184,7 @@ def playersWithoutBye(tournamentID = 1):
                  INNER JOIN players ON tournament_players.PlayerID = players.ID
                  WHERE HadBye = 0 AND TournamentID = %s;""", (tournamentID, ))
     rows = c.fetchall()
-
+    #Close DB Connection
     db.close()
 
     return [(int(row[0]), row[1]) for row in rows]
@@ -188,4 +196,5 @@ def setBye(playerID, tournamentID = 1):
     #run Database Query
     c.execute("UPDATE tournament_players SET HadBye = 1 WHERE TournamentID = %s AND PlayerID = %s;", (tournamentID, playerID))
     db.commit()
+    #Close DB Connection
     db.close()
