@@ -10,191 +10,93 @@ import time
 import psycopg2
 from random import shuffle
 
-def connect():
-    #Connect to Database
-    return psycopg2.connect("dbname=tournament")
+def connect():    
+    try:
+        db = psycopg2.connect("dbname='tournament' user='postgres' password='postgres'")
+	c = db.cursor()
+	return db, c
+    except:
+	print "Unable to connect to database"		
 
-def deleteMatches():
-    #Connect to Database
-    db = connect()
-    c = db.cursor()
-    #Delete from Database
-    c.execute("DELETE FROM matches")
-    db.commit()
-    #Close DB Connection
+def deleteMatches():    
+    db, c = connect()    
+    c.execute("DELETE FROM matches;")
+    db.commit()   
     db.close()
 
 def deletePlayers():
-    deleteTournamentPlayers()
-    #Connect to Database
-    db = connect()
-    c = db.cursor()
-    #Delete from Database
+    db, c = connect()
     c.execute("DELETE FROM players;")
     db.commit()
-    #Close DB Connection
     db.close()
 
-def deleteTournamentPlayers():
-    #Connect to Database
-    db = connect()
-    c = db.cursor()
-    #Delete from Database
-    c.execute("DELETE FROM tournament_players;")
-    db.commit()
-    #Close DB Connection
-    db.close()
-
-def deleteTournaments():
-    #Connect to Database
-    db = connect()
-    c = db.cursor()
-    #Delete from Database
+def deleteTournaments():    
+    db, c = connect()
     c.execute("DELETE FROM tournaments;")
-    db.commit()
-    #Close DB Connection
+    db.commit()    
     db.close()
 
-def countPlayers():
-    #Connect to Database
-    db = connect()
-    c = db.cursor()
-    #run Database Query
+def countPlayers():    
+    db, c = connect()
     c.execute("SELECT count(*) from players;")
-    rows = c.fetchall()
-    #Close DB Connection
+    rows = c.fetchall()    
     db.close()
-
     return int(rows[0][0])
 
-def createTournament(name, tournamentID = None):
-    #Connect to Database
-    db = connect()
-    c = db.cursor()
-    #run Database Query
+def createTournament(name, tournamentID = None):    
+    db, c = connect()    
     if tournamentID is None:
         c.execute("INSERT INTO tournaments VALUES (DEFAULT, %s);", (name, ))
     else:
-        c.execute("INSERT INTO tournaments VALUES (%s, %s);", (tournamentID, name))
-
-    db.commit()
-    #Close DB Connection
+        c.execute("INSERT INTO tournaments VALUES (DEFAULT, %s, %s);", (tournamentID, name))
+    db.commit()    
     db.close()
 
-
-def registerPlayer(name, tournamentID = 1):
-    #Connect to Database
-    db = connect()
-    c = db.cursor()
-    #run Database Query
+def registerPlayer(name):    
+    db, c = connect()   
     c.execute("INSERT INTO players VALUES (DEFAULT, %s);", (name, ))
-
-    if tournamentID is not None:
-        c.execute("SELECT currval(pg_get_serial_sequence('players', 'id'));")
-        playerID = int(c.fetchall()[0][0])
-
-        c.execute("INSERT INTO tournament_players VALUES (%s, %s, DEFAULT)", (tournamentID, playerID))
-
-    db.commit()
-    #Close DB Connection
+    db.commit()    
     db.close()
 
-def addPlayerToTournament(tournamentID, playerID):
-    #Connect to Database
-    db = connect()
-    c = db.cursor()
-    #run Database Query
-    c.execute("INSERT INTO tournament_players VALUES (%s, %s, DEFAULT)", (tournamentID, playerID))
-
-    db.commit()
-    #Close DB Connection
+def playerStandings(tournamentID = 1):    
+    db, c = connect()
+    c.execute("SELECT PlayerID, PlayerName, Wins, Matches FROM Standings order by Wins asc")
+    rows = c.fetchall()    
     db.close()
-
-def playerStandings(tournamentID = 1):
-    #Connect to Database
-    db = connect()
-    c = db.cursor()
-    #run Database Query
-    c.execute("SELECT PlayerID, PlayerName, Wins, Games FROM player_stats WHERE TournamentID = %s" , (tournamentID, ))
-    rows = c.fetchall()
-    #Close DB Connection
-    db.close()
-
     l = list()
-
-    for row in rows:
-        l.append((int(row[0]), row[1], int(row[2]), int(row[3])))
-
+    i=0
+    while i < len(rows):
+        l.append((int(rows[i][0]), rows[i][1], int(rows[i][2]), int(rows[i][3])))
+        i=i+1
     return l
 
-def playerStats(tournamentID = 1):
-    #Connect to Database
-    db = connect()
-    c = db.cursor()
-    #run Database Query
-    c.execute("SELECT * FROM player_stats WHERE TournamentID = %s;", (tournamentID, ))
+def reportMatch(winner, loser, draw, tournamentID = 1):    
+    db, c = connect()
+    if draw:
+        c.execute("INSERT INTO Matches VALUES (DEFAULT, 1, %s,%s,%s)",(winner,loser,winner))
+        c.execute("INSERT INTO Matches VALUES (DEFAULT, 1, %s,%s,&s)",(loser,winner,winner))
+    else:
+        c.execute("INSERT INTO Matches VALUES (DEFAULT, 1, %s,%s,%s)",(winner,loser,winner))
+        c.execute("INSERT INTO Matches VALUES (DEFAULT, 1, %s,%s,%s)",(loser,winner,0))    
+    db.commit()    
+    db.close()
+
+def swissPairings():    
+    db, c = connect()
+    c.execute("SELECT * FROM Standings ORDER BY wins DESC;")
     rows = c.fetchall()
-    #Close DB Connection
     db.close()
-
-    return [(int(row[1]), row[2], int(row[3]), int(row[4]), int(row[5])) for row in rows]
-
-def reportMatch(firstPlayer, secondPlayer, winner, tournamentID = 1):
-    #Connect to Database
-    db = connect()
-    c = db.cursor()
-    #run Database Query
-    c.execute("INSERT INTO matches VALUES (DEFAULT, %s, %s, %s, %s);", (tournamentID, firstPlayer, secondPlayer, winner))
-    db.commit()
-    #Close DB Connection
-    db.close()
-
-def swissPairings(tournamentID = 1):
-    
-    standings = playerStandings(tournamentID)
-
-    if len(standings) % 2 != 0:
-        # there is an odd amount of players
-        players = playersWithoutBye()
-        shuffle(players)
-
-        luckyPlayer = players.pop()
-        setBye(luckyPlayer[0])
-
-        # report the match / remove the lucky player 
-        reportMatch(luckyPlayer[0], None, luckyPlayer[0])
-        standings = [player for player in standings if player[0] != luckyPlayer[0]]
-
-    l = list()
-
-    while len(standings) >= 2:
-        firstPlayer = standings.pop(0)
-        secondPlayer = standings.pop(0)
-
-        l.append((firstPlayer[0], firstPlayer[1], secondPlayer[0], secondPlayer[1]))
-
-    return l
-
-def playersWithoutBye(tournamentID = 1):
-    #Connect to Database
-    db = connect()
-    c = db.cursor()
-    #run Database Query
-    c.execute("""SELECT PlayerID, Name FROM tournament_players
-                 INNER JOIN players ON tournament_players.PlayerID = players.ID
-                 WHERE HadBye = 0 AND TournamentID = %s;""", (tournamentID, ))
-    rows = c.fetchall()
-    #Close DB Connection
-    db.close()
-
-    return [(int(row[0]), row[1]) for row in rows]
-
-def setBye(playerID, tournamentID = 1):
-    #Connect to Database
-    db = connect()
-    c = db.cursor()
-    #run Database Query
-    c.execute("UPDATE tournament_players SET HadBye = 1 WHERE TournamentID = %s AND PlayerID = %s;", (tournamentID, playerID))
-    db.commit()
-    #Close DB Connection
-    db.close()
+    i=0
+    standings = playerStandings()
+    num = int(countPlayers())
+    pairings = []
+    if (num > 0): 
+        for i in range (num):
+            if (i % 2 == 0):
+                id1 = standings[i][0]
+                name1 = standings[i][1]
+                id2 = standings[i + 1][0]
+                name2 = standings[i + 1][1]
+                pair = (id1, name1, id2, name2)
+                pairings.append(pair)
+	return pairings

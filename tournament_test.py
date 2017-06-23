@@ -51,6 +51,7 @@ def testStandingsBeforeMatches():
     deletePlayers()
     registerPlayer("Melpomene Murray")
     registerPlayer("Randy Schwartz")
+    createTournament("The First World Tournament")
     standings = playerStandings()
     if len(standings) < 2:
         raise ValueError("Players should appear in playerStandings even before "
@@ -79,10 +80,11 @@ def testReportMatches():
     registerPlayer("Boots O'Neal")
     registerPlayer("Cathy Burton")
     registerPlayer("Diane Grant")
+    createTournament("The First World Tournament")
     standings = playerStandings()
     [id1, id2, id3, id4] = [row[0] for row in standings]
-    reportMatch(id1, id2)
-    reportMatch(id3, id4)
+    reportMatch(id1, id2, False)
+    reportMatch(id3, id4, False)
     standings = playerStandings()
     for (i, n, w, m) in standings:
         if m != 1:
@@ -109,24 +111,21 @@ def testPairings():
     """
     deleteMatches()
     deletePlayers()
-    registerPlayer("Twilight Sparkle")
-    registerPlayer("Fluttershy")
-    registerPlayer("Applejack")
-    registerPlayer("Pinkie Pie")
-    registerPlayer("Rarity")
-    registerPlayer("Rainbow Dash")
-    registerPlayer("Princess Celestia")
-    registerPlayer("Princess Luna")
+    registerPlayer("Arnold Schwarzenegger")
+    registerPlayer("Silvester Stallone")
+    registerPlayer("Bruce Lee")
+    registerPlayer("Jacky Chan")
+    registerPlayer("Bud Spencer")
+    registerPlayer("Terence Hill")
+    registerPlayer("Jason Statham")
+    registerPlayer("Tom Hanks")
+    createTournament("The First World Tournament")
     standings = playerStandings()
-    [id1, id2, id3, id4, id5, id6, id7, id8] = [row[0] for row in standings]
-    pairings = swissPairings()
-    if len(pairings) != 4:
-        raise ValueError(
-            "For eight players, swissPairings should return 4 pairs. Got {pairs}".format(pairs=len(pairings)))
-    reportMatch(id1, id2)
-    reportMatch(id3, id4)
-    reportMatch(id5, id6)
-    reportMatch(id7, id8)
+    [id1, id2, id3, id4, id5, id6, id7, id8] = [row[0] for row in standings]     
+    reportMatch(id1, id2, False)
+    reportMatch(id3, id4, False)
+    reportMatch(id5, id6, False)
+    reportMatch(id7, id8, False)
     pairings = swissPairings()
     if len(pairings) != 4:
         raise ValueError(
@@ -140,7 +139,7 @@ def testPairings():
                           frozenset([id4, id8]), frozenset([id6, id8])
                           ])
     actual_pairs = set([frozenset([pid1, pid2]), frozenset([pid3, pid4]), frozenset([pid5, pid6]), frozenset([pid7, pid8])])
-    for pair in actual_pairs:
+    for pair in actual_pairs:	
         if pair not in possible_pairs:
             raise ValueError(
                 "After one match, players with one win should be paired.")
